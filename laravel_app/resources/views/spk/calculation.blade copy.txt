@@ -1,0 +1,481 @@
+<x-app-layout>
+    <x-slot:title>Detail Perhitungan</x-slot:title>
+
+    {{-- ── Header ── --}}
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 mx-8">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">Detail Perhitungan</h1>
+            <p class="text-xs text-gray-400 mt-1">Setiap langkah ditampilkan lengkap beserta rumus yang digunakan</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ route('spk.results') }}"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition shadow-sm">
+                ← Kembali ke Hasil
+            </a>
+            <button onclick="window.print()"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition shadow-sm">
+                🖨 Cetak Halaman
+            </button>
+        </div>
+    </div>
+
+    {{-- ── Tab Navigation ── --}}
+    <div class="mx-8 mb-6">
+        <div class="flex gap-1 bg-gray-100 rounded-2xl p-1 w-fit">
+            @foreach (['ahp' => 'AHP', 'saw' => 'SAW', 'aras' => 'ARAS', 'edas' => 'EDAS'] as $key => $label)
+                <button onclick="switchTab('{{ $key }}')" id="tab-{{ $key }}"
+                    class="tab-btn px-5 py-2 text-sm font-bold rounded-xl transition-all
+                       {{ $key === 'ahp' ? 'bg-white text-indigo-700 shadow' : 'text-gray-500 hover:text-gray-700' }}">
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- ================================================================
+         TAB: AHP
+    ================================================================ --}}
+    <div id="panel-ahp" class="tab-panel mx-8 space-y-6">
+        @php
+            $ahp = $steps['ahp'];
+            $names = array_keys($ahp['weights']);
+        @endphp
+
+        {{-- Rumus box --}}
+        <x-spk-formula title="AHP — Analytic Hierarchy Process">
+            <p><strong>1.</strong> Jumlahkan setiap kolom matriks perbandingan berpasangan.</p>
+            <p><strong>2.</strong> Normalisasi: bagi setiap elemen dengan jumlah kolomnya → <code>ā_ij = a_ij /
+                    Σa_j</code></p>
+            <p><strong>3.</strong> Eigenvector (bobot): rata-rata tiap baris → <code>w_i = Σā_ij / n</code></p>
+            <p><strong>4.</strong> Konsistensi: <code>λmax = Σ(Weighted Sum / w_i) / n</code> &nbsp;|&nbsp; <code>CI =
+                    (λmax − n) / (n − 1)</code> &nbsp;|&nbsp; <code>CR = CI / RI</code></p>
+            <p class="text-xs text-gray-400 mt-1">CR ≤ 0.1 = konsisten. RI: n=3→0.58, n=4→0.90, n=5→1.12</p>
+        </x-spk-formula>
+
+        {{-- Langkah 1: Matriks asli --}}
+        <x-spk-step number="1" title="Matriks Perbandingan Berpasangan">
+            <x-spk-table :headers="array_merge(['Kriteria'], $names)">
+                @foreach ($ahp['matrix'] as $rowName => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $rowName }}</td>
+                        @foreach ($row as $val)
+                            <td class="px-4 py-2.5 text-center text-gray-600">{{ $val }}</td>
+                        @endforeach
+                    </tr>
+                @endforeach
+                <tr class="bg-blue-50 font-bold border-t-2 border-blue-100">
+                    <td class="px-4 py-2.5 text-blue-700">Jumlah Kolom</td>
+                    @foreach ($ahp['column_sums'] as $sum)
+                        <td class="px-4 py-2.5 text-center text-blue-700">{{ round($sum, 4) }}</td>
+                    @endforeach
+                </tr>
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 2: Matriks ternormalisasi --}}
+        <x-spk-step number="2" title="Matriks Ternormalisasi & Eigenvector (Bobot)">
+            <x-spk-table :headers="array_merge(['Kriteria'], $names, ['Bobot (w)'])">
+                @foreach ($ahp['normalized_matrix'] as $rowName => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $rowName }}</td>
+                        @foreach ($row as $val)
+                            <td class="px-4 py-2.5 text-center text-gray-500">{{ $val }}</td>
+                        @endforeach
+                        <td class="px-4 py-2.5 text-center font-bold text-indigo-700 bg-indigo-50">
+                            {{ $ahp['weights'][$rowName] }}
+                        </td>
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 3: Consistency Check --}}
+        <x-spk-step number="3" title="Uji Konsistensi">
+            <x-spk-table :headers="['Kriteria', 'Bobot (w)', 'Weighted Sum', 'λ_i = WS / w']">
+                @foreach ($names as $name)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $name }}</td>
+                        <td class="px-4 py-2.5 text-center">{{ $ahp['weights'][$name] }}</td>
+                        <td class="px-4 py-2.5 text-center">{{ $ahp['weighted_sum'][$name] }}</td>
+                        <td class="px-4 py-2.5 text-center">{{ $ahp['lambda_values'][$name] }}</td>
+                    </tr>
+                @endforeach
+            </x-spk-table>
+            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <x-spk-stat label="λ max" :value="$ahp['lambda_max']" />
+                <x-spk-stat label="CI" :value="$ahp['ci']" />
+                <x-spk-stat label="RI (n={{ $ahp['n'] }})" :value="$ahp['ri']" />
+                <x-spk-stat label="CR" :value="$ahp['cr']" :highlight="$ahp['consistent'] ? 'green' : 'red'" :note="$ahp['consistent'] ? '✓ Konsisten' : '✗ Tidak Konsisten'" />
+            </div>
+        </x-spk-step>
+    </div>
+
+    {{-- ================================================================
+         TAB: SAW
+    ================================================================ --}}
+    <div id="panel-saw" class="tab-panel mx-8 space-y-6 hidden">
+        @php
+            $saw = $steps['saw'];
+            $sawCriteria = $saw['criteria'];
+            $sawNames = array_map(fn($r) => $r['name'], $saw['original']);
+        @endphp
+
+        <x-spk-formula title="SAW — Simple Additive Weighting">
+            <p><strong>1.</strong> Normalisasi benefit: <code>r_ij = x_ij / max(x_j)</code></p>
+            <p><strong>2.</strong> Normalisasi cost: <code>r_ij = min(x_j) / x_ij</code></p>
+            <p><strong>3.</strong> Skor akhir: <code>V_i = Σ (w_j × r_ij)</code></p>
+        </x-spk-formula>
+
+        {{-- Langkah 1: Data asli --}}
+        <x-spk-step number="1" title="Data Asli & Tipe Kriteria">
+            @php
+                $sawHeaders = ['Alternatif'];
+                foreach ($sawCriteria as $ci) {
+                    $type = $saw['mapping'][$ci] === 'benefit' ? '↑ Benefit' : '↓ Cost';
+                    $sawHeaders[] = "K-{$ci} ({$type})";
+                }
+            @endphp
+            <x-spk-table :headers="$sawHeaders">
+                @foreach ($saw['original'] as $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($sawCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center text-gray-600">{{ $row['values'][$ci] ?? '-' }}</td>
+                        @endforeach
+                    </tr>
+                @endforeach
+                <tr class="bg-green-50 border-t-2 border-green-100 text-xs font-bold text-green-700">
+                    <td class="px-4 py-2.5">Max</td>
+                    @foreach ($sawCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center">{{ $saw['max_val'][$ci] }}</td>
+                    @endforeach
+                </tr>
+                <tr class="bg-red-50 border-t border-red-50 text-xs font-bold text-red-600">
+                    <td class="px-4 py-2.5">Min</td>
+                    @foreach ($sawCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center">{{ $saw['min_val'][$ci] }}</td>
+                    @endforeach
+                </tr>
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 2: Matriks ternormalisasi --}}
+        <x-spk-step number="2" title="Matriks Normalisasi (r_ij)">
+            <x-spk-table :headers="array_merge(['Alternatif'], array_map(fn($c) => 'K-' . $c, $sawCriteria))">
+                @foreach ($saw['results'] as $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($sawCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center text-gray-500 font-mono text-xs">
+                                {{ $row['normalized'][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 3: Weighted sum + skor --}}
+        <x-spk-step number="3" title="Weighted Sum & Skor Akhir (V_i)">
+            @php
+                $wHeaders = ['Alternatif'];
+                foreach ($sawCriteria as $ci) {
+                    $wHeaders[] = "w·r K-{$ci}";
+                }
+                $wHeaders[] = 'Skor (V)';
+                $wHeaders[] = 'Rank';
+            @endphp
+            <x-spk-table :headers="$wHeaders">
+                @foreach ($saw['results'] as $row)
+                    <tr
+                        class="border-b border-gray-50 hover:bg-gray-50 {{ $row['rank'] <= 3 ? 'bg-amber-50/40' : '' }}">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($sawCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center text-gray-500 font-mono text-xs">
+                                {{ $row['weighted_detail'][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                        <td class="px-4 py-2.5 text-center font-bold text-blue-700 bg-blue-50 font-mono">
+                            {{ number_format($row['score'], 4) }}
+                        </td>
+                        <td class="px-4 py-2.5 text-center font-black text-gray-700">#{{ $row['rank'] }}</td>
+                    </tr>
+                @endforeach
+                <tr class="bg-gray-50 border-t-2 text-xs font-bold text-gray-500">
+                    <td class="px-4 py-2.5">Bobot (w)</td>
+                    @foreach ($sawCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center">{{ $saw['weights'][$ci] }}</td>
+                    @endforeach
+                    <td colspan="2"></td>
+                </tr>
+            </x-spk-table>
+        </x-spk-step>
+    </div>
+
+    {{-- ================================================================
+         TAB: ARAS
+    ================================================================ --}}
+    <div id="panel-aras" class="tab-panel mx-8 space-y-6 hidden">
+        @php
+            $aras = $steps['aras'];
+            $arasCriteria = $aras['criteria'];
+        @endphp
+
+        <x-spk-formula title="ARAS — Additive Ratio Assessment">
+            <p><strong>1.</strong> Tentukan nilai optimum A0: benefit → max, cost → min</p>
+            <p><strong>2.</strong> Normalisasi benefit: <code>x̄_ij = x_ij / Σx_j</code></p>
+            <p><strong>3.</strong> Normalisasi cost: <code>x̄_ij = (1/x_ij) / Σ(1/x_j)</code></p>
+            <p><strong>4.</strong> Weighted: <code>y_ij = w_j × x̄_ij</code> &nbsp;|&nbsp; <code>S_i = Σy_ij</code></p>
+            <p><strong>5.</strong> Degree of utility: <code>K_i = S_i / S_0</code></p>
+        </x-spk-formula>
+
+        {{-- Langkah 1: A0 --}}
+        <x-spk-step number="1" title="Nilai Optimum A0">
+            <x-spk-table :headers="array_merge([''], array_map(fn($c) => 'K-' . $c, $arasCriteria))">
+                <tr class="bg-purple-50 border-b border-purple-100">
+                    <td class="px-4 py-2.5 font-bold text-purple-700 bg-purple-100">A0 (Optimum)</td>
+                    @foreach ($arasCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center font-bold text-purple-700">{{ $aras['a0'][$ci] }}</td>
+                    @endforeach
+                </tr>
+                @foreach ($aras['original'] as $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($arasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center text-gray-600">{{ $row['values'][$ci] ?? '-' }}</td>
+                        @endforeach
+                    </tr>
+                @endforeach
+                <tr class="bg-gray-50 text-xs font-bold text-gray-500 border-t-2">
+                    <td class="px-4 py-2.5">Σ Kolom</td>
+                    @foreach ($arasCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center">{{ round($aras['sum_col'][$ci], 4) }}</td>
+                    @endforeach
+                </tr>
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 2: Normalisasi --}}
+        <x-spk-step number="2" title="Matriks Normalisasi (x̄_ij)">
+            <x-spk-table :headers="array_merge(['Alternatif'], array_map(fn($c) => 'K-' . $c, $arasCriteria))">
+                @foreach ($aras['all_rows'] as $k => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50 {{ $k === 0 ? 'bg-purple-50' : '' }}">
+                        <td
+                            class="px-4 py-2.5 font-semibold {{ $k === 0 ? 'text-purple-700' : 'text-gray-700' }} bg-opacity-50">
+                            {{ $row['name'] }}
+                        </td>
+                        @foreach ($arasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center font-mono text-xs text-gray-500">
+                                {{ $aras['norm_matrix'][$k][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 3: Weighted & S --}}
+        <x-spk-step number="3" title="Weighted Normalized (y_ij) & S_i">
+            <x-spk-table :headers="array_merge(['Alternatif'], array_map(fn($c) => 'y K-' . $c, $arasCriteria), ['S_i'])">
+                @foreach ($aras['all_rows'] as $k => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50 {{ $k === 0 ? 'bg-purple-50' : '' }}">
+                        <td class="px-4 py-2.5 font-semibold {{ $k === 0 ? 'text-purple-700' : 'text-gray-700' }}">
+                            {{ $row['name'] }}
+                        </td>
+                        @foreach ($arasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center font-mono text-xs text-gray-500">
+                                {{ $aras['w_matrix'][$k][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                        <td
+                            class="px-4 py-2.5 text-center font-bold {{ $k === 0 ? 'text-purple-700 bg-purple-100' : 'text-gray-700 bg-gray-50' }} font-mono">
+                            {{ $aras['scores'][$k] ?? '-' }}
+                        </td>
+                    </tr>
+                @endforeach
+            </x-spk-table>
+            <div class="mt-3 inline-flex items-center gap-3 px-4 py-2 bg-purple-50 rounded-xl text-sm">
+                <span class="font-semibold text-purple-700">S₀ (Optimum) =</span>
+                <span class="font-mono font-bold text-purple-900">{{ $aras['s0'] }}</span>
+            </div>
+        </x-spk-step>
+
+        {{-- Langkah 4: K_i --}}
+        <x-spk-step number="4" title="Degree of Utility (K_i = S_i / S₀) & Ranking">
+            <x-spk-table :headers="['Alternatif', 'S_i', 'S₀', 'K_i (Skor)', 'Rank']">
+                @foreach ($aras['results'] as $row)
+                    <tr
+                        class="border-b border-gray-50 hover:bg-gray-50 {{ $row['rank'] <= 3 ? 'bg-amber-50/40' : '' }}">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-xs">{{ $row['S'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-xs text-purple-600">{{ $aras['s0'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-bold text-purple-700 bg-purple-50 font-mono">
+                            {{ number_format($row['score'], 4) }}
+                        </td>
+                        <td class="px-4 py-2.5 text-center font-black text-gray-700">#{{ $row['rank'] }}</td>
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+    </div>
+
+    {{-- ================================================================
+         TAB: EDAS
+    ================================================================ --}}
+    <div id="panel-edas" class="tab-panel mx-8 space-y-6 hidden">
+        @php
+            $edas = $steps['edas'];
+            $edasCriteria = $edas['criteria'];
+        @endphp
+
+        <x-spk-formula title="EDAS — Evaluation based on Distance from Average Solution">
+            <p><strong>1.</strong> Average Solution: <code>AV_j = Σx_ij / n</code></p>
+            <p><strong>2.</strong> PDA benefit: <code>max(0, x_ij − AV_j) / AV_j</code> &nbsp;|&nbsp; NDA benefit:
+                <code>max(0, AV_j − x_ij) / AV_j</code></p>
+            <p><strong>3.</strong> PDA cost: <code>max(0, AV_j − x_ij) / AV_j</code> &nbsp;|&nbsp; NDA cost:
+                <code>max(0, x_ij − AV_j) / AV_j</code></p>
+            <p><strong>4.</strong> <code>SP_i = Σ(w_j × PDA_ij)</code> &nbsp;|&nbsp; <code>SN_i = Σ(w_j × NDA_ij)</code>
+            </p>
+            <p><strong>5.</strong> <code>NSP_i = SP_i / max(SP)</code> &nbsp;|&nbsp; <code>NSN_i = 1 − SN_i /
+                    max(SN)</code></p>
+            <p><strong>6.</strong> Appraisal Score: <code>AS_i = 0.5 × (NSP_i + NSN_i)</code></p>
+        </x-spk-formula>
+
+        {{-- Langkah 1: AV --}}
+        <x-spk-step number="1" title="Average Solution (AV_j)">
+            <x-spk-table :headers="array_merge([''], array_map(fn($c) => 'K-' . $c, $edasCriteria))">
+                <tr class="bg-indigo-50">
+                    <td class="px-4 py-2.5 font-bold text-indigo-700 bg-indigo-100">AV (Rata-rata)</td>
+                    @foreach ($edasCriteria as $ci)
+                        <td class="px-4 py-2.5 text-center font-bold text-indigo-700 font-mono">
+                            {{ $edas['av'][$ci] }}
+                        </td>
+                    @endforeach
+                </tr>
+                @foreach ($edas['original'] as $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($edasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center text-gray-600">{{ $row['values'][$ci] ?? '-' }}</td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 2: PDA --}}
+        <x-spk-step number="2" title="Positive Distance from Average (PDA_ij)">
+            <x-spk-table :headers="array_merge(['Alternatif'], array_map(fn($c) => 'PDA K-' . $c, $edasCriteria))">
+                @foreach ($edas['original'] as $k => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($edasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center font-mono text-xs text-green-700">
+                                {{ $edas['pda_matrix'][$k][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 3: NDA --}}
+        <x-spk-step number="3" title="Negative Distance from Average (NDA_ij)">
+            <x-spk-table :headers="array_merge(['Alternatif'], array_map(fn($c) => 'NDA K-' . $c, $edasCriteria))">
+                @foreach ($edas['original'] as $k => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        @foreach ($edasCriteria as $ci)
+                            <td class="px-4 py-2.5 text-center font-mono text-xs text-red-600">
+                                {{ $edas['nda_matrix'][$k][$ci] ?? '-' }}
+                            </td>
+                        @endforeach
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 4: SP & SN --}}
+        <x-spk-step number="4" title="Weighted Sum SP_i & SN_i">
+            <x-spk-table :headers="['Alternatif', 'SP_i', 'SN_i']">
+                @foreach ($edas['original'] as $k => $row)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-sm text-green-700 font-bold">
+                            {{ $edas['sp'][$k] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-sm text-red-600 font-bold">
+                            {{ $edas['sn'][$k] }}</td>
+                    </tr>
+                @endforeach
+                <tr class="bg-gray-50 text-xs font-bold text-gray-500 border-t-2">
+                    <td class="px-4 py-2.5">Max</td>
+                    <td class="px-4 py-2.5 text-center text-green-700">{{ $edas['max_sp'] }}</td>
+                    <td class="px-4 py-2.5 text-center text-red-600">{{ $edas['max_sn'] }}</td>
+                </tr>
+            </x-spk-table>
+        </x-spk-step>
+
+        {{-- Langkah 5: NSP, NSN, AS --}}
+        <x-spk-step number="5" title="Normalisasi NSP & NSN → Appraisal Score (AS)">
+            <x-spk-table :headers="['Alternatif', 'NSP_i', 'NSN_i', 'AS = 0.5(NSP+NSN)', 'Rank']">
+                @foreach ($edas['results'] as $row)
+                    <tr
+                        class="border-b border-gray-50 hover:bg-gray-50 {{ $row['rank'] <= 3 ? 'bg-amber-50/40' : '' }}">
+                        <td class="px-4 py-2.5 font-semibold text-gray-700 bg-gray-50">{{ $row['name'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-xs text-green-700">{{ $row['NSP'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-mono text-xs text-blue-600">{{ $row['NSN'] }}</td>
+                        <td class="px-4 py-2.5 text-center font-bold text-indigo-700 bg-indigo-50 font-mono">
+                            {{ number_format($row['score'], 4) }}
+                        </td>
+                        <td class="px-4 py-2.5 text-center font-black text-gray-700">#{{ $row['rank'] }}</td>
+                    </tr>
+                @endforeach
+            </x-spk-table>
+        </x-spk-step>
+    </div>
+
+    <div class="mb-10"></div>
+
+    @push('scripts')
+        <script>
+            function switchTab(active) {
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.className =
+                        'tab-btn px-5 py-2 text-sm font-bold rounded-xl transition-all text-gray-500 hover:text-gray-700';
+                });
+                document.getElementById('panel-' + active).classList.remove('hidden');
+                document.getElementById('tab-' + active).className =
+                    'tab-btn px-5 py-2 text-sm font-bold rounded-xl transition-all bg-white text-indigo-700 shadow';
+            }
+        </script>
+
+        <style>
+            @media print {
+
+                nav,
+                button,
+                form,
+                .tab-btn {
+                    display: none !important;
+                }
+
+                .tab-panel {
+                    display: block !important;
+                }
+
+                .hidden {
+                    display: block !important;
+                }
+
+                .mx-8 {
+                    margin: 0 !important;
+                }
+
+                body {
+                    font-size: 11px;
+                }
+            }
+        </style>
+    @endpush
+</x-app-layout>

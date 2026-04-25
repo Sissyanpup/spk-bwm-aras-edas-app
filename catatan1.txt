@@ -1,0 +1,32 @@
+=== Setelah install akan ada folder folder tersebut, kasih izin di linux ===
+(base) [bethapup@sissyanpuppy SPK_Comms]$ sudo chown -R $USER:$USER laravel_app
+(base) [bethapup@sissyanpuppy SPK_Comms]$ cd laravel_app/
+(base) [bethapup@sissyanpuppy laravel_app]$ sudo chown -R www-data:www-data storage bootstrap/cache
+chown: invalid user: ‘www-data:www-data’
+(base) [bethapup@sissyanpuppy laravel_app]$ sudo chown -R $USER:$USER storage bootstrap/cache
+(base) [bethapup@sissyanpuppy laravel_app]$ sudo chown -R 775 storage bootstrap/cache
+
+=== Setiap memakai php, sebelumnya ada beberapa kata : ===
+"docker exec -it ..."
+"docker exec -it [folder berisi php] php artisan ..."
+
+(base) [bethapup@sissyanpuppy SPK_Comms]$ cd laravel_app/
+(base) [bethapup@sissyanpuppy laravel_app]$ docker exec -it laravel_app php artisan make:controller HalloController
+
+   INFO  Controller [app/Http/Controllers/HalloController.php] created successfully.  
+
+(base) [bethapup@sissyanpuppy laravel_app]$ 
+
+=== instalasi composer ===
+# Instal Laravel Excel
+docker compose exec app composer require maatwebsite/excel
+
+# Buat model dan migrasi utama
+docker compose exec app php artisan make:model Criterion -m
+docker compose exec app php artisan make:model Alternative -m
+docker compose exec app php artisan make:model PerformanceScore -m
+
+===!!! Jika Error kebanyakan Cache !!!===
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d

@@ -8,12 +8,13 @@ services:
       - ./laravel_app:/var/www/html
     ports:
       - "8000:80"
+      - "5173:5173"
     environment:
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_DATABASE: laravel_db
       DB_USERNAME: laravel
-      DB_PASSWORD: secret
+      DB_PASSWORD: password
     depends_on:
       - mysql
       - phpmyadmin
@@ -27,13 +28,17 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: laravel_db
       MYSQL_USER: laravel
-      MYSQL_PASSWORD: secret
+      MYSQL_PASSWORD: password
     ports:
       - "3307:3306"
     volumes:
       - ./mysql_data:/var/lib/mysql
     networks:
       - laravel
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: laravel_phpmyadmin
@@ -48,8 +53,7 @@ services:
       - mysql
     networks:
       - laravel
+
 networks:
   laravel:
-
-volumes:
-  mysql-data:
+    driver: bridge
