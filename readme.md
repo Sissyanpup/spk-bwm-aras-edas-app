@@ -17,3 +17,12 @@ Beberapa program yang digunakan adalah:
    ```
 5. Setelah container berjalan, buka browser anda dan akses `http://localhost:8000` untuk melihat aplikasi Laravel yang sedang berjalan.
 6. Jangan lupa untuk mengatur file `.env` sesuai dengan kebutuhan anda, terutama bagian database.
+
+## Deskripsi
+Sistem Pendukung Keputusan untuk manajemen komisi atau tugas kuliah dengan perbandingan 3 metode.
+
+## Fitur Utama
+1. Impor data dari Excel.
+2. 3 Metode Pembobotan: Manual, AHP (dengan pengecekan CR), dan BWM.
+3. 3 Metode SPK: SAW, ARAS, dan EDAS.
+4. Grafik perbandingan skor menggunakan Chart.js.
