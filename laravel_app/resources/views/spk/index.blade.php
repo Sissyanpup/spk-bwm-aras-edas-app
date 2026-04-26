@@ -93,14 +93,20 @@
             <form action="{{ route('spk.preview') }}" method="POST">
                 @csrf
                 <input type="hidden" name="is_manual" value="1">
-                <div class="overflow-x-auto border border-gray-100 rounded-2xl mb-6 shadow-sm">
-                    <table class="w-full text-sm text-left">
+
+                <div
+                    class="overflow-x-auto border border-gray-100 rounded-2xl mb-6 shadow-sm scrollbar-thin scrollbar-thumb-gray-200">
+                    <table class="w-full text-sm text-left border-collapse">
                         <thead class="bg-gray-50 border-b border-gray-100">
                             <tr>
                                 <template x-for="(header, hIdx) in manualData.headers" :key="hIdx">
-                                    <th class="p-4">
-                                        <input type="text" name="headers[]" x-model="manualData.headers[hIdx]"
-                                            class="w-full bg-white border border-gray-200 rounded-lg font-bold focus:ring-blue-500 p-2 text-gray-700 shadow-sm">
+                                    <th class="p-4" :class="hIdx === 0 ? 'min-w-[200px]' : 'min-w-[150px]'">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-[10px] text-gray-400 uppercase font-bold"
+                                                x-text="hIdx === 0 ? 'Identitas' : 'Kriteria ' + hIdx"></span>
+                                            <input type="text" name="headers[]" x-model="manualData.headers[hIdx]"
+                                                class="w-full bg-white border border-gray-200 rounded-lg font-bold focus:ring-blue-500 p-2 text-gray-700 shadow-sm text-xs">
+                                        </div>
                                     </th>
                                 </template>
                             </tr>
@@ -109,10 +115,11 @@
                             <template x-for="(row, rIdx) in manualData.rows" :key="rIdx">
                                 <tr class="hover:bg-gray-50/50 transition-colors">
                                     <template x-for="(cell, cIdx) in row" :key="cIdx">
-                                        <td class="p-3">
+                                        <td class="p-3" :class="cIdx === 0 ? 'min-w-[200px]' : 'min-w-[150px]'">
                                             <input :type="cIdx === 0 ? 'text' : 'number'"
                                                 :name="'manual_rows[' + rIdx + '][]'"
-                                                x-model="manualData.rows[rIdx][cIdx]"
+                                                x-model="manualData.rows[rIdx][cIdx]" step="any"
+                                                :placeholder="cIdx === 0 ? 'Nama Alternatif...' : 'Nilai...'"
                                                 class="w-full border-gray-200 rounded-xl focus:ring-blue-500 text-sm shadow-sm">
                                         </td>
                                     </template>
@@ -121,6 +128,7 @@
                         </tbody>
                     </table>
                 </div>
+
                 <button type="submit"
                     class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
                     Lanjut Preview Data

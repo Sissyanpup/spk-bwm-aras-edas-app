@@ -15,8 +15,17 @@ Beberapa program yang digunakan adalah:
    ```bash
    docker-compose up -d
    ```
-5. Setelah container berjalan, buka browser anda dan akses `http://localhost:8000` untuk melihat aplikasi Laravel yang sedang berjalan.
-6. Jangan lupa untuk mengatur file `.env` sesuai dengan kebutuhan anda, terutama bagian database.
+5. Setelah semua terinstall, jangan lupa generate key untuk memiliki akses projek ini.
+   ```bash
+   docker compose exec app php artisan key:generate
+   ```
+6. Kemudian masuk ke folder projek, hingga laravel_app untuk menyalakan npm
+   ```bash
+   cd /path/to/laravel_app
+   docker compose exec app npm run build
+   ```
+7. Setelah container berjalan, buka browser anda dan akses `http://localhost:8000` untuk melihat aplikasi Laravel yang sedang berjalan.
+8. Jangan lupa untuk mengatur file `.env` sesuai dengan kebutuhan anda, terutama bagian database.
 
 ## Deskripsi
 Sistem Pendukung Keputusan untuk manajemen komisi atau tugas kuliah dengan perbandingan 3 metode.
