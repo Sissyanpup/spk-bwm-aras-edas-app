@@ -279,7 +279,6 @@
     @push('scripts')
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
         <script>
-            // Pastikan data dipassing sebagai JSON yang valid
             const labels = @json($chartLabels);
             const dataSets = {
                 saw: @json($sawScores),
@@ -288,32 +287,41 @@
             };
 
             function getDatasets(type) {
+                const isLine = type === 'line';
+
                 return [{
                         label: 'SAW',
                         data: dataSets.saw,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        // Jika line, backgroundColor hanya untuk titik (point), jika bar untuk batang
+                        backgroundColor: isLine ? '#3B82F6' : 'rgba(59, 130, 246, 0.7)',
                         borderColor: '#3B82F6',
                         borderWidth: 2,
                         tension: 0.3,
-                        fill: type === 'line'
+                        fill: false, // PAKSA FALSE: Menghilangkan warna ke sumbu X
+                        pointRadius: isLine ? 4 : 0, // Munculkan titik hanya jika mode line
+                        pointHoverRadius: 6
                     },
                     {
                         label: 'ARAS',
                         data: dataSets.aras,
-                        backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                        backgroundColor: isLine ? '#8B5CF6' : 'rgba(139, 92, 246, 0.7)',
                         borderColor: '#8B5CF6',
                         borderWidth: 2,
                         tension: 0.3,
-                        fill: type === 'line'
+                        fill: false, // PAKSA FALSE
+                        pointRadius: isLine ? 4 : 0,
+                        pointHoverRadius: 6
                     },
                     {
                         label: 'EDAS',
                         data: dataSets.edas,
-                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        backgroundColor: isLine ? '#6366F1' : 'rgba(99, 102, 241, 0.7)',
                         borderColor: '#6366F1',
                         borderWidth: 2,
                         tension: 0.3,
-                        fill: type === 'line'
+                        fill: false, // PAKSA FALSE
+                        pointRadius: isLine ? 4 : 0,
+                        pointHoverRadius: 6
                     }
                 ];
             }
@@ -330,6 +338,10 @@
                     plugins: {
                         legend: {
                             position: 'bottom'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
                         }
                     },
                     scales: {
